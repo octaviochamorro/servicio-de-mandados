@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Tarifas - Tus Mandados en Auto Eldorado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals (Amber, Slate, Off-white) -->
+    <!-- Application Structure Plan: A task-oriented interactive calculator. Users navigate through service, zone, and add-on selections. The right panel dynamically updates with estimated costs, a detailed breakdown, and a visual Chart.js doughnut chart. This structure prioritizes user engagement and direct answers ("How much will my specific errand cost?"), improving on static price lists. -->
+    <!-- Visualization & Content Choices: Service Prices -> Inform & Calculate -> Interactive Cards/Buttons (HTML/CSS), Dynamic Text Display (JS), Donut Chart (Chart.js); Interactions: User clicks to select options, JavaScript calculates and updates total and breakdown in real-time. The doughnut chart visually represents cost components (base, surcharges, add-ons), aiding comprehension. Confirmed NO SVG/Mermaid used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .service-card, .option-button, .addon-label {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .service-card.selected, .option-button.selected {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #f59e0b; /* amber-500 */
+        }
+        .addon-label input:checked + span {
+            border-color: #f59e0b; /* amber-500 */
+            background-color: #fffbeb; /* amber-50 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 380px;
+            }
+        }
+        .custom-number-input {
+            display: flex;
+            align-items: center;
+            border-radius: 6px;
+            overflow: hidden; /* To keep buttons and input border-radius consistent */
+            width: 50px; /* Made the container even narrower */
+        }
+        .custom-number-input button {
+            background-color: #f59e0b; /* amber-500 */
+            color: white;
+            padding: 4px 6px; /* Reduced padding further */
+            font-size: 0.8rem; /* Reduced font size for buttons */
+            font-weight: 700; /* font-bold */
+            line-height: 1;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .custom-number-input button:hover {
+            background-color: #d97706; /* amber-600 */
+        }
+        .custom-number-input input[type="number"] {
+            flex-grow: 1;
+            padding: 4px 2px; /* Reduced padding further */
+            text-align: center;
+            font-weight: 500; /* font-medium */
+            border: 1px solid #cbd5e1; /* slate-300 */
+            -moz-appearance: textfield; /* Firefox hide arrows */
+            appearance: textfield; /* Chrome/Safari hide arrows */
+            outline: none; /* Remove focus outline */
+            font-size: 0.8rem; /* Reduced font size for input */
+            height: 32px; /* Adjusted height */
+        }
+        /* Hide arrows for Chrome, Safari, Edge, Opera */
+        .custom-number-input input[type="number"]::-webkit-outer-spin-button,
+        .custom-number-input input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900">🚗💨 ¡Tus Mandados al Toque en Auto en Eldorado! 💨🚗</h1>
+            <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">Desde Barrio El Paraíso (Km9) a donde necesites en la ciudad. Usá nuestra calculadora para estimar el costo de tu servicio.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
+
+            <div class="lg:col-span-3">
+                <div class="space-y-8">
+                    <section>
+                        <h2 class="text-2xl font-bold mb-4">1. Seleccioná el Servicio Principal 📦</h2>
+                        <p class="text-slate-600 mb-4">Elegí el tipo de mandado que necesitás para empezar a calcular.</p>
+                        <div id="service-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="service-card border-2 bg-white border-slate-200 p-4 rounded-lg text-center" data-service="basico">
+                                <span class="text-4xl">🚀</span>
+                                <h3 class="font-bold mt-2">Mandado Básico</h3>
+                                <p class="text-sm text-slate-500">Remedios, documentos, paquetes chicos, delivery de comida.</p>
+                            </div>
+                            <div class="service-card border-2 bg-white border-slate-200 p-4 rounded-lg text-center" data-service="compras">
+                                <span class="text-4xl">🛒</span>
+                                <h3 class="font-bold mt-2">Búsqueda de Compras</h3>
+                                <p class="text-sm text-slate-500">Súper, tiendas, lo que necesites.</p>
+                            </div>
+                            <div class="service-card border-2 bg-white border-slate-200 p-4 rounded-lg text-center" data-service="traslado">
+                                <span class="text-4xl">📦</span>
+                                <h3 class="font-bold mt-2">Traslado de Objetos</h3>
+                                <p class="text-sm text-slate-500">Medianos y grandes.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 class="text-2xl font-bold mb-4">2. Elegí la Zona de Destino 🗺️</h2>
+                        <p class="text-slate-600 mb-4">Indicá la zona donde se realizará el mandado para aplicar la tarifa base correcta.</p>
+                        <div id="zone-selection" class="flex flex-wrap gap-3">
+                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="cercana">Zona Cercana (hasta Km10 y Km7)</button>
+                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="intermedia">Zona Intermedia (hasta Km12 y Km5)</button>
+                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="alejada">Zona Alejada (Consultar)</button>
+                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="piray">¡A Puerto Piray! 🚢</button>
+                        </div>
+                    </section>
+                    
+                    <section id="object-size-section" class="hidden">
+                        <h2 class="text-2xl font-bold mb-4">3. Tamaño del Objeto a Trasladar (solo para Traslado) 📦</h2>
+                        <p class="text-slate-600 mb-4">Si seleccionaste "Traslado de Objetos", indicá el tamaño para el recargo.</p>
+                        <div id="object-size-selection" class="flex flex-wrap gap-3">
+                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-size="mediano">Mediano</button>
+                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-size="grande">Grande</button>
+                        </div>
+                        <p class="text-sm text-slate-500 mt-2">*(No es servicio de flete para muebles grandes.)*</p>
+                    </section>
+                    
+                    <section>
+                        <h2 class="text-2xl font-bold mb-4">4. Servicios Adicionales (Opcional) ➕</h2>
+                        <p class="text-slate-600 mb-4">Seleccioná los extras que tu mandado podría necesitar.</p>
+                        <div class="space-y-3">
+                             <label class="flex flex-col addon-label bg-white p-3 rounded-lg border-2 border-slate-200">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="addon-espera" class="h-5 w-5 rounded text-amber-600 focus:ring-amber-500">
+                                    <span class="ml-3 font-medium">Tiempo de Espera Extra ⏳</span>
+                                </div>
+                                <span id="espera-info-text" class="text-sm text-slate-500 mt-2 ml-8 hidden">Recargo: +$1.000 cada 15 minutos</span>
+                            </label>
+                            <label class="flex items-center addon-label bg-white p-3 rounded-lg border-2 border-slate-200 flex-wrap">
+                                <input type="checkbox" id="addon-parada" class="h-5 w-5 rounded text-amber-600 focus:ring-amber-500 mr-3">
+                                <span class="font-medium flex-grow">Parada Adicional: +$1.500 por cada extra 📍</span>
+                                <div id="parada-quantity-container" class="hidden mt-2 ml-8 w-full md:w-auto md:ml-0 md:mt-0 flex items-center justify-end custom-number-input">
+                                    <button id="parada-minus">-</button>
+                                    <input type="number" id="parada-count" min="1" value="1" class="bg-slate-100 focus:border-amber-500">
+                                    <button id="parada-plus">+</button>
+                                </div>
+                            </label>
+                            <label class="flex items-center addon-label bg-white p-3 rounded-lg border-2 border-slate-200">
+                                <input type="checkbox" id="addon-urgente" class="h-5 w-5 rounded text-amber-600 focus:ring-amber-500">
+                                <span class="ml-3 font-medium">Servicio Urgente / Fuera de Horario: Recargo del 35% 🌙</span>
+                            </label>
+                        </div>
+                    </section>
+                    
+                    <section class="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+                        <h2 class="text-2xl font-bold mb-4">Horarios y Medios de Pago 📆</h2>
+                        <div class="text-slate-700">
+                            <p class="mb-2"><span class="font-bold">Horarios de Servicio:</span></p>
+                            <ul class="list-disc list-inside ml-4 space-y-1">
+                                <li>Lunes a Viernes: 8:00 a 21:00 hs.</li>
+                                <li>Para otros horarios (noches, feriados) se aplica el recargo por Servicio Urgente.</li>
+                            </ul>
+                            <p class="mt-4 mb-2"><span class="font-bold">Medios de Pago:</span></p>
+                            <ul class="list-disc list-inside ml-4 space-y-1">
+                                <li>Efectivo 💵</li>
+                                <li>Transferencia Bancaria 💳</li>
+                                <li>Mercado Pago 📲</li>
+                            </ul>
+                            <p class="mt-4 text-sm text-slate-500">El costo de los productos (remedios, compras, etc.) NO está incluido en el precio de mi servicio. 💸</p>
+                        </div>
+                    </section>
+
+                </div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="sticky top-8 bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                    <h2 class="text-2xl font-bold text-center mb-4">Costo Estimado</h2>
+                    <p id="total-price" class="text-5xl font-extrabold text-center text-amber-500 mb-6">$0</p>
+
+                    <div id="breakdown-section">
+                        <h3 class="font-bold text-lg mb-2">Desglose del Costo:</h3>
+                        <ul id="breakdown-list" class="space-y-1 text-slate-600 mb-6">
+                            <li id="no-selection-msg">Seleccioná un servicio y zona para comenzar.</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="chart-wrapper" class="hidden">
+                        <div class="chart-container">
+                            <canvas id="priceChart"></canvas>
+                        </div>
+                    </div>
+
+                    <a id="contact-button" href="https://wa.me/5493751605932?text=Hola,%20quisiera%20consultar%20por%20un%20servicio%20de%20mandado." target="_blank" class="block w-full bg-green-500 hover:bg-green-600 text-white font-bold text-lg text-center py-3 px-5 rounded-lg transition-colors mt-6">
+                        Contactar por WhatsApp
+                    </a>
+                    
+                    <div class="text-center mt-4 text-sm text-slate-500">
+                        <p>Los precios son estimativos. El costo de productos no está incluido.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const PRICING = {
+            base: {
+                cercana: 6000, // Changed from 8000
+                intermedia: 7500, // Changed from 9500
+                alejada: 'consultar',
+                piray: 20000 // Fixed price for Puerto Piray (median of range)
+            },
+            addons: {
+                compras_fixed_surcharge: 2500,
+                traslado_mediano: 1500, // Changed from 2000
+                traslado_grande: 2500, // Changed from 3500
+                espera: 1000, // Changed from 1500
+                parada: 1500, // Changed from 2000
+                urgente_pct: 0.35
+            }
+        };
+
+        const serviceNames = {
+            basico: 'Mandado Básico',
+            compras: 'Búsqueda de Compras',
+            traslado: 'Traslado de Objetos'
+        };
+
+        const zoneNames = {
+            cercana: 'Zona Cercana (hasta Km10 y Km7)',
+            intermedia: 'Zona Intermedia (hasta Km12 y Km5)', // Updated text here
+            alejada: 'Zona Alejada',
+            piray: '¡A Puerto Piray! 🚢' // New zone name and attractive text
+        };
+
+        const objectSizeNames = {
+            mediano: 'Mediano',
+            grande: 'Grande'
+        };
+
+
+        const selection = {
+            service: null,
+            zone: null,
+            objectSize: null,
+            addons: {
+                espera: false,
+                parada: false,
+                paradaCount: 1, 
+                urgente: false,
+            }
+        };
+        
+        const serviceCards = document.querySelectorAll('.service-card');
+        const zoneButtons = document.querySelectorAll('#zone-selection .option-button');
+        const objectSizeButtons = document.querySelectorAll('#object-size-selection .option-button');
+        const objectSizeSection = document.getElementById('object-size-section');
+        
+        const addonEspera = document.getElementById('addon-espera');
+        const esperaInfoText = document.getElementById('espera-info-text'); 
+        const addonParada = document.getElementById('addon-parada');
+        const paradaQuantityContainer = document.getElementById('parada-quantity-container');
+        const paradaCountInput = document.getElementById('parada-count');
+        const paradaMinusBtn = document.getElementById('parada-minus');
+        const paradaPlusBtn = document.getElementById('parada-plus');
+        const addonUrgente = document.getElementById('addon-urgente');
+
+        const totalPriceEl = document.getElementById('total-price');
+        const breakdownListEl = document.getElementById('breakdown-list');
+        const noSelectionMsg = document.getElementById('no-selection-msg');
+        const chartWrapper = document.getElementById('chart-wrapper');
+        const contactButton = document.getElementById('contact-button');
+
+        let priceChart;
+
+        function updateSelection(group, value, elements) {
+            elements.forEach(el => {
+                if (el.dataset[group] === value) {
+                    el.classList.add('selected', 'border-amber-500');
+                } else {
+                    el.classList.remove('selected', 'border-amber-500');
+                }
+            });
+        }
+        
+        serviceCards.forEach(card => {
+            card.addEventListener('click', () => {
+                selection.service = card.dataset.service;
+                updateSelection('service', selection.service, serviceCards);
+                
+                objectSizeSection.classList.toggle('hidden', selection.service !== 'traslado');
+                
+                if (selection.service !== 'traslado') {
+                    selection.objectSize = null;
+                    updateSelection('size', null, objectSizeButtons);
+                }
+                
+                calculateTotal();
+            });
+        });
+
+        zoneButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                selection.zone = button.dataset.zone;
+                updateSelection('zone', selection.zone, zoneButtons);
+                calculateTotal();
+            });
+        });
+        
+        objectSizeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                selection.objectSize = button.dataset.size;
+                updateSelection('size', selection.objectSize, objectSizeButtons);
+                calculateTotal();
+            });
+        });
+        
+        addonEspera.addEventListener('change', () => {
+            selection.addons.espera = addonEspera.checked;
+            esperaInfoText.classList.toggle('hidden', !addonEspera.checked); // Toggle visibility
+            calculateTotal();
+        });
+
+        addonParada.addEventListener('change', () => {
+            selection.addons.parada = addonParada.checked;
+            paradaQuantityContainer.classList.toggle('hidden', !addonParada.checked);
+            // Ensure paradaCount is at least 1 when checked
+            if (addonParada.checked && selection.addons.paradaCount < 1) {
+                selection.addons.paradaCount = 1;
+                paradaCountInput.value = 1;
+            } else if (!addonParada.checked) {
+                selection.addons.paradaCount = 0; // Reset count if unchecked
+            }
+            calculateTotal();
+        });
+
+        paradaCountInput.addEventListener('input', () => {
+            let value = parseInt(paradaCountInput.value);
+            if (isNaN(value) || value < 1) { // Ensure value is a number and at least 1
+                value = 1;
+                paradaCountInput.value = 1;
+            }
+            selection.addons.paradaCount = value;
+            calculateTotal();
+        });
+
+        paradaMinusBtn.addEventListener('click', () => {
+            let currentValue = parseInt(paradaCountInput.value);
+            if (currentValue > 1) {
+                paradaCountInput.value = currentValue - 1;
+                selection.addons.paradaCount = currentValue - 1;
+                calculateTotal();
+            }
+        });
+
+        paradaPlusBtn.addEventListener('click', () => {
+            let currentValue = parseInt(paradaCountInput.value);
+            paradaCountInput.value = currentValue + 1;
+            selection.addons.paradaCount = currentValue + 1;
+            calculateTotal();
+        });
+
+
+        addonUrgente.addEventListener('change', () => {
+            selection.addons.urgente = addonUrgente.checked;
+            calculateTotal();
+        });
+
+        function calculateTotal() {
+            if (!selection.service || !selection.zone) {
+                resetDisplay();
+                updateWhatsappLink('', '$0');
+                return;
+            }
+
+            if (selection.zone === 'alejada') {
+                totalPriceEl.textContent = 'Consultar';
+                breakdownListEl.innerHTML = `<li class="text-center">Para zonas alejadas, por favor contactanos para una cotización personalizada.</li>`;
+                noSelectionMsg.classList.add('hidden');
+                chartWrapper.classList.add('hidden');
+                updateWhatsappLink('un servicio en Zona Alejada', 'Consultar');
+                return;
+            }
+
+            let total = 0;
+            const breakdown = [];
+            const chartData = { labels: [], values: [] };
+
+            const basePrice = PRICING.base[selection.zone];
+            total += basePrice;
+            breakdown.push({ label: `Tarifa Base (${zoneNames[selection.zone]})`, value: basePrice, type: 'base' });
+            
+            let purchaseSurcharge = 0; 
+
+            if (selection.service === 'compras') {
+                purchaseSurcharge = PRICING.addons.compras_fixed_surcharge; // Fixed surcharge
+                breakdown.push({ label: `Gestión de Compras`, value: purchaseSurcharge, type: 'addon' }); 
+            }
+
+            let otherAddonsTotal = 0; 
+
+            if (selection.service === 'traslado' && selection.objectSize) {
+                const surcharge = PRICING.addons[`traslado_${selection.objectSize}`];
+                otherAddonsTotal += surcharge;
+                breakdown.push({ label: `Traslado Objeto ${objectSizeNames[selection.objectSize]}`, value: surcharge, type: 'addon' });
+            }
+
+            if (selection.addons.espera) {
+                // Do not add to total or breakdown, it's just an informational flag
+            }
+            if (selection.addons.parada && selection.addons.paradaCount > 0) {
+                const paradaCost = PRICING.addons.parada * selection.addons.paradaCount;
+                otherAddonsTotal += paradaCost;
+                breakdown.push({ label: `Paradas Adicionales (x${selection.addons.paradaCount})`, value: paradaCost, type: 'addon' });
+            }
+            
+            total += purchaseSurcharge + otherAddonsTotal; 
+
+            let urgentSurchargeValue = 0; 
+            if (selection.addons.urgente) {
+                urgentSurchargeValue = total * PRICING.addons.urgente_pct;
+                total += urgentSurchargeValue;
+                breakdown.push({ label: `Recargo Urgente (${PRICING.addons.urgente_pct * 100}%)`, value: urgentSurchargeValue, type: 'addon' });
+            }
+
+            // Prepare data for chart
+            chartData.labels.push('Tarifa Base');
+            chartData.values.push(basePrice);
+
+            if (purchaseSurcharge > 0) {
+                chartData.labels.push('Gestión de Compras');
+                chartData.values.push(purchaseSurcharge);
+            }
+            if (otherAddonsTotal > 0) {
+                chartData.labels.push('Otros Recargos'); 
+                chartData.values.push(otherAddonsTotal);
+            }
+            if (urgentSurchargeValue > 0) {
+                chartData.labels.push('Recargo Urgente');
+                chartData.values.push(urgentSurchargeValue);
+            }
+
+
+            const formattedTotal = `$${Math.round(total).toLocaleString('es-AR')}`;
+            updateDisplay(total, breakdown, chartData);
+            updateWhatsappLink(buildWhatsappMessage(total, breakdown), formattedTotal);
+        }
+        
+        function updateDisplay(total, breakdown, chartData) {
+            totalPriceEl.textContent = `$${Math.round(total).toLocaleString('es-AR')}`;
+            
+            noSelectionMsg.classList.add('hidden');
+            breakdownListEl.innerHTML = breakdown.map(item => `
+                <li class="flex justify-between">
+                    <span>${item.label}</span>
+                    <span class="font-medium">$${Math.round(item.value).toLocaleString('es-AR')}</span>
+                </li>
+            `).join('');
+            
+            chartWrapper.classList.remove('hidden');
+            updateChart(chartData.labels, chartData.values);
+        }
+        
+        function resetDisplay() {
+            totalPriceEl.textContent = '$0';
+            noSelectionMsg.classList.remove('hidden');
+            breakdownListEl.innerHTML = `<li id="no-selection-msg">Seleccioná un servicio y zona para comenzar.</li>`;
+            chartWrapper.classList.add('hidden');
+        }
+
+        function buildWhatsappMessage(total, breakdown) {
+            let message = `Hola, me gustaría consultar por un servicio de mandado en auto.\n`;
+            message += `Resumen del cálculo:\n\n`;
+
+            if (selection.service) {
+                message += `Servicio Principal: ${serviceNames[selection.service]}\n`;
+            }
+            if (selection.zone) {
+                message += `Zona: ${zoneNames[selection.zone]}\n`;
+            }
+            if (selection.service === 'traslado' && selection.objectSize) {
+                message += `Tamaño de Objeto: ${objectSizeNames[selection.objectSize]}\n`;
+            }
+
+            const addonsSummary = [];
+            if (selection.addons.espera) {
+                addonsSummary.push('Espera Extra (recargo de $1.000 cada 15 minutos)'); // Updated with new price
+            }
+            if (selection.addons.parada && selection.addons.paradaCount > 0) {
+                addonsSummary.push(`Paradas Adicionales (x${selection.addons.paradaCount})`);
+            }
+            if (selection.addons.urgente) {
+                addonsSummary.push('Servicio Urgente/Fuera de Horario');
+            }
+
+            if (addonsSummary.length > 0) {
+                message += `Adicionales: ${addonsSummary.join(', ')}\n`;
+            }
+
+            message += `\nCosto Estimado: $${Math.round(total).toLocaleString('es-AR')}\n\n`;
+            // Add a specific note for Puerto Piray if selected
+            if (selection.zone === 'piray') {
+                message += `*Nota sobre Puerto Piray: El costo final para Puerto Piray puede variar entre $18.000 y $22.000, dependiendo de la especificidad del mandado y el tamaño del objeto. Por favor, coordinemos los detalles directamente para un precio exacto.*\n\n`;
+            }
+            breakdown.forEach(item => {
+                message += `- ${item.label}: $${Math.round(item.value).toLocaleString('es-AR')}\n`;
+            });
+            message += `\nEspero tu respuesta para coordinar. ¡Gracias!`;
+            return message;
+        }
+
+        function updateWhatsappLink(message, totalDisplay) {
+            let baseText = "Hola, quisiera consultar por un servicio de mandado.";
+            if (message && totalDisplay !== 'Consultar' && totalDisplay !== '$0') {
+                baseText = message;
+            } else if (selection.zone === 'alejada') {
+                baseText = `Hola, quisiera consultar por un servicio de mandado en Zona Alejada.`;
+            } else if (selection.service && selection.zone) {
+                baseText = `Hola, quisiera consultar por un servicio de ${serviceNames[selection.service]} en ${zoneNames[selection.zone]}.`;
+            }
+
+            contactButton.href = `https://wa.me/5493751605932?text=${encodeURIComponent(baseText)}`;
+        }
+
+
+        function initChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            priceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Desglose de Costo',
+                        data: [],
+                        backgroundColor: [
+                            '#f59e0b', /* amber-500 */
+                            '#fbbf24', /* amber-400 */
+                            '#fcd34d', /* amber-300 */
+                            '#fde68a', /* amber-200 */
+                            '#d97706', /* amber-600 */
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    family: 'Inter'
+                                },
+                                generateLabels: function(chart) {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map(function(label, i) {
+                                            const meta = chart.getDatasetMeta(0);
+                                            const style = meta.data[i].options;
+                                            const value = data.datasets[0].data[i];
+                                            const total = data.datasets[0].data.reduce((sum, val) => sum + val, 0);
+                                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                                            return {
+                                                text: `${label}: $${Math.round(value).toLocaleString('es-AR')} (${percentage})`,
+                                                fillStyle: style.backgroundColor,
+                                                strokeStyle: style.borderColor,
+                                                lineWidth: style.borderWidth,
+                                                hidden: !chart.isDatasetVisible(0) || data.datasets[0].data[i] === 0,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        const value = context.parsed;
+                                        const total = context.dataset.data.reduce((sum, val) => sum + val, 0);
+                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                                        label += new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value) + ` (${percentage})`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateChart(labels, data) {
+            if (priceChart) {
+                priceChart.data.labels = labels;
+                priceChart.data.datasets[0].data = data;
+                priceChart.update();
+            }
+        }
+        
+        window.onload = () => {
+            initChart();
+            calculateTotal(); // Initial calculation to set up state and WhatsApp link
+        };
+
+    </script>
+</body>
+</html>
