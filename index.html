@@ -125,8 +125,9 @@
                         <p class="text-slate-600 mb-4">Indicá la zona donde se realizará el mandado para aplicar la tarifa base correcta.</p>
                         <div id="zone-selection" class="flex flex-wrap gap-3">
                             <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="cercana">Zona Cercana (hasta Km10 y Km7)</button>
-                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="intermedia">Zona Intermedia (hasta Km14 y Km6)</button>
+                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="intermedia">Zona Intermedia (hasta Km12 y Km5)</button>
                             <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="alejada">Zona Alejada (Consultar)</button>
+                            <button class="option-button border-2 bg-white border-slate-200 px-4 py-2 rounded-full font-medium" data-zone="piray">¡A Puerto Piray! 🚢</button>
                         </div>
                     </section>
                     
@@ -149,11 +150,11 @@
                                     <input type="checkbox" id="addon-espera" class="h-5 w-5 rounded text-amber-600 focus:ring-amber-500">
                                     <span class="ml-3 font-medium">Tiempo de Espera Extra ⏳</span>
                                 </div>
-                                <span id="espera-info-text" class="text-sm text-slate-500 mt-2 ml-8 hidden">Recargo: +$1.500 cada 15 minutos</span>
+                                <span id="espera-info-text" class="text-sm text-slate-500 mt-2 ml-8 hidden">Recargo: +$1.000 cada 15 minutos</span>
                             </label>
                             <label class="flex items-center addon-label bg-white p-3 rounded-lg border-2 border-slate-200 flex-wrap">
                                 <input type="checkbox" id="addon-parada" class="h-5 w-5 rounded text-amber-600 focus:ring-amber-500 mr-3">
-                                <span class="font-medium flex-grow">Parada Adicional: +$2.000 por cada extra 📍</span>
+                                <span class="font-medium flex-grow">Parada Adicional: +$1.500 por cada extra 📍</span>
                                 <div id="parada-quantity-container" class="hidden mt-2 ml-8 w-full md:w-auto md:ml-0 md:mt-0 flex items-center justify-end custom-number-input">
                                     <button id="parada-minus">-</button>
                                     <input type="number" id="parada-count" min="1" value="1" class="bg-slate-100 focus:border-amber-500">
@@ -172,7 +173,7 @@
                         <div class="text-slate-700">
                             <p class="mb-2"><span class="font-bold">Horarios de Servicio:</span></p>
                             <ul class="list-disc list-inside ml-4 space-y-1">
-                                <li>Lunes a Viernes: 7:30 a 21:00 hs.</li>
+                                <li>Lunes a Viernes: 8:00 a 21:00 hs.</li>
                                 <li>Para otros horarios (noches, feriados) se aplica el recargo por Servicio Urgente.</li>
                             </ul>
                             <p class="mt-4 mb-2"><span class="font-bold">Medios de Pago:</span></p>
@@ -221,17 +222,18 @@
     <script>
         const PRICING = {
             base: {
-                cercana: 8000,
-                intermedia: 9500,
-                alejada: 'consultar'
+                cercana: 6000, // Changed from 8000
+                intermedia: 7500, // Changed from 9500
+                alejada: 'consultar',
+                piray: 20000 // Fixed price for Puerto Piray (median of range)
             },
             addons: {
-                compras_fixed_surcharge: 2500, // Fixed surcharge for purchases
-                traslado_mediano: 2000,
-                traslado_grande: 3500,
-                espera: 1500, // This value is now informational, not added to total
-                parada: 2000,
-                urgente_pct: 0.35 /* Changed to 35% */
+                compras_fixed_surcharge: 2500,
+                traslado_mediano: 1500, // Changed from 2000
+                traslado_grande: 2500, // Changed from 3500
+                espera: 1000, // Changed from 1500
+                parada: 1500, // Changed from 2000
+                urgente_pct: 0.35
             }
         };
 
@@ -243,8 +245,9 @@
 
         const zoneNames = {
             cercana: 'Zona Cercana (hasta Km10 y Km7)',
-            intermedia: 'Zona Intermedia (hasta Km14 y Km6)',
-            alejada: 'Zona Alejada'
+            intermedia: 'Zona Intermedia (hasta Km12 y Km5)', // Updated text here
+            alejada: 'Zona Alejada',
+            piray: '¡A Puerto Piray! 🚢' // New zone name and attractive text
         };
 
         const objectSizeNames = {
@@ -498,7 +501,7 @@
 
             const addonsSummary = [];
             if (selection.addons.espera) {
-                addonsSummary.push('Espera Extra (recargo de $1.500 cada 15 minutos)');
+                addonsSummary.push('Espera Extra (recargo de $1.000 cada 15 minutos)'); // Updated with new price
             }
             if (selection.addons.parada && selection.addons.paradaCount > 0) {
                 addonsSummary.push(`Paradas Adicionales (x${selection.addons.paradaCount})`);
@@ -512,7 +515,10 @@
             }
 
             message += `\nCosto Estimado: $${Math.round(total).toLocaleString('es-AR')}\n\n`;
-            message += `Detalle:\n`;
+            // Add a specific note for Puerto Piray if selected
+            if (selection.zone === 'piray') {
+                message += `*Nota sobre Puerto Piray: El costo final para Puerto Piray puede variar entre $18.000 y $22.000, dependiendo de la especificidad del mandado y el tamaño del objeto. Por favor, coordinemos los detalles directamente para un precio exacto.*\n\n`;
+            }
             breakdown.forEach(item => {
                 message += `- ${item.label}: $${Math.round(item.value).toLocaleString('es-AR')}\n`;
             });
